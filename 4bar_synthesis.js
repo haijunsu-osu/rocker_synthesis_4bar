@@ -14,6 +14,7 @@ let outputAngles = [45, 75, 105];
 let groundLength = 200;
 let currentInputAngle = 30;
 let animationStep = 0;
+let slider = null;
 
 function parseAngles(str) {
     return str.split(',').map(s => parseFloat(s.trim())).filter(a => !isNaN(a));
@@ -163,38 +164,48 @@ function synthesize() {
         alert('Please enter the same number of input and output angles (at least 2 pairs).');
         return;
     }
-    drawSpecifiedPositions();
     solution = leastSquaresSolver(groundLength, inputAngles, outputAngles);
     if (!solution) {
         alert('No solution found. Try different angles or ground length.');
         return;
     }
-    // Draw the solution linkage at the first input/output angle
-    drawGrid();
-    drawLinkage(groundLength, solution.inputLen, solution.outputLen, solution.couplerLen, inputAngles[0], outputAngles[0], true);
-    currentInputAngle = inputAngles[0];
+    // Draw both original task positions and solution linkage overlay
+    drawSpecifiedPositions();
+    drawLinkage(groundLength, solution.inputLen, solution.outputLen, solution.couplerLen, currentInputAngle, interpolateOutputAngle(currentInputAngle), false);
     animationStep = 0;
+    // Update slider range and value
+    if (slider) {
+        slider.min = Math.min(...inputAngles);
+        slider.max = Math.max(...inputAngles);
+        slider.value = currentInputAngle;
+    }
 }
 
 function animateLinkage() {
     if (!solution) return;
-    drawGrid();
     // Animate input angle from min to max
     const minAngle = Math.min(...inputAngles);
     const maxAngle = Math.max(...inputAngles);
     currentInputAngle += 1;
     if (currentInputAngle > maxAngle) currentInputAngle = minAngle;
-    // Estimate output angle by linear interpolation
-    let outputAngle = outputAngles[0];
+    if (slider) slider.value = currentInputAngle;
+    // Draw both original task positions and solution linkage overlay
+    drawSpecifiedPositions();
+    drawLinkage(groundLength, solution.inputLen, solution.outputLen, solution.couplerLen, currentInputAngle, interpolateOutputAngle(currentInputAngle), false);
+    animationId = requestAnimationFrame(animateLinkage);
+}
+function interpolateOutputAngle(inputAngle) {
+    // Linear interpolation for output angle
+    if (inputAngles.length === 1) return outputAngles[0];
+    if (inputAngle <= inputAngles[0]) return outputAngles[0];
+    if (inputAngle >= inputAngles[inputAngles.length-1]) return outputAngles[outputAngles.length-1];
     for (let i = 1; i < inputAngles.length; i++) {
-        if (currentInputAngle <= inputAngles[i]) {
-            const t = (currentInputAngle - inputAngles[i-1]) / (inputAngles[i] - inputAngles[i-1]);
-            outputAngle = outputAngles[i-1] + t * (outputAngles[i] - outputAngles[i-1]);
-            break;
+        if (inputAngle <= inputAngles[i]) {
+            const t = (inputAngle - inputAngles[i-1]) / (inputAngles[i] - inputAngles[i-1]);
+            return outputAngles[i-1] + t * (outputAngles[i] - outputAngles[i-1]);
         }
     }
-    drawLinkage(groundLength, solution.inputLen, solution.outputLen, solution.couplerLen, currentInputAngle, outputAngle, true);
-    animationId = requestAnimationFrame(animateLinkage);
+    return outputAngles[outputAngles.length-1];
 }
 
 synthesizeBtn.onclick = synthesize;
@@ -211,4 +222,26 @@ playPauseBtn.onclick = function() {
     }
 };
 
+// Add slider for driver link position
+function addSlider() {
+    const controlsDiv = document.querySelector('.controls');
+    slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = Math.min(...inputAngles);
+    slider.max = Math.max(...inputAngles);
+    slider.value = currentInputAngle;
+    slider.step = 1;
+    slider.style.width = '300px';
+    slider.id = 'driverSlider';
+    slider.oninput = function() {
+        currentInputAngle = parseFloat(slider.value);
+        if (solution) {
+            drawSpecifiedPositions();
+            drawLinkage(groundLength, solution.inputLen, solution.outputLen, solution.couplerLen, currentInputAngle, interpolateOutputAngle(currentInputAngle), false);
+        }
+    };
+    controlsDiv.appendChild(slider);
+}
+
+addSlider();
 drawSpecifiedPositions();
