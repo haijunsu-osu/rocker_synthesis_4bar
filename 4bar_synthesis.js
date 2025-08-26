@@ -208,17 +208,43 @@ function animateLinkage() {
     drawPlot();
 }
 function interpolateOutputAngle(inputAngle) {
-    // Linear interpolation for output angle
-    if (inputAngles.length === 1) return outputAngles[0];
-    if (inputAngle <= inputAngles[0]) return outputAngles[0];
-    if (inputAngle >= inputAngles[inputAngles.length-1]) return outputAngles[outputAngles.length-1];
-    for (let i = 1; i < inputAngles.length; i++) {
-        if (inputAngle <= inputAngles[i]) {
-            const t = (inputAngle - inputAngles[i-1]) / (inputAngles[i] - inputAngles[i-1]);
-            return outputAngles[i-1] + t * (outputAngles[i] - outputAngles[i-1]);
-        }
+    // Four-bar kinematic analysis: solve for output angle given input angle and link lengths
+    if (!solution) return 0;
+    const r1 = groundLength;
+    const r2 = solution.inputLen;
+    const r3 = solution.couplerLen;
+    const r4 = solution.outputLen;
+    const theta2 = inputAngle * Math.PI / 180;
+    // Vector loop closure: r1 + r2*e^(i*theta2) = r4*e^(i*theta4) + r3*e^(i*theta3)
+    // Solve for theta4 (output link angle) using law of cosines
+    // Compute position of C (input link end)
+    const Ax = -r1/2, Ay = 0;
+    const Bx = r1/2, By = 0;
+    const Cx = Ax + r2 * Math.cos(theta2);
+    const Cy = Ay + r2 * Math.sin(theta2);
+    // D must be at distance r4 from B and r3 from C
+    // Find intersection of two circles
+    const dx = Cx - Bx;
+    const dy = Cy - By;
+    const d = Math.sqrt(dx*dx + dy*dy);
+    if (d > r3 + r4 || d < Math.abs(r3 - r4)) {
+        // No solution
+        return 0;
     }
-    return outputAngles[outputAngles.length-1];
+    // Circle intersection math
+    const a = (r4*r4 - r3*r3 + d*d) / (2*d);
+    const h = Math.sqrt(Math.max(0, r4*r4 - a*a));
+    const xm = Bx + a * (dx) / d;
+    const ym = By + a * (dy) / d;
+    // Two possible solutions (open/closed)
+    const xs1 = xm + h * (dy) / d;
+    const ys1 = ym - h * (dx) / d;
+    // Use the solution with positive y (above ground)
+    const Dx = xs1;
+    const Dy = ys1;
+    // Output angle
+    const theta4 = Math.atan2(Dy - By, Dx - Bx);
+    return theta4 * 180 / Math.PI;
 }
 
 synthesizeBtn.onclick = synthesize;
