@@ -16,8 +16,8 @@ let currentInputAngle = 30;
 let animationStep = 0;
 let slider = null;
 const linkLengthsDiv = document.getElementById('linkLengths');
-const plotCanvas = document.getElementById('plot-canvas');
-const plotCtx = plotCanvas ? plotCanvas.getContext('2d') : null;
+let plotCanvas = null;
+let plotCtx = null;
 const currentAnglesDiv = document.getElementById('currentAngles');
 
 function parseAngles(str) {
@@ -185,6 +185,9 @@ function synthesize() {
         slider.max = Math.max(...inputAngles);
         slider.value = currentInputAngle;
     }
+    // Initialize plot canvas and context after DOM update
+    plotCanvas = document.getElementById('plot-canvas');
+    plotCtx = plotCanvas ? plotCanvas.getContext('2d') : null;
     drawPlot();
     updateCurrentAngles();
 }
@@ -249,6 +252,9 @@ function addSlider() {
             drawSpecifiedPositions();
             drawLinkage(groundLength, solution.inputLen, solution.outputLen, solution.couplerLen, currentInputAngle, interpolateOutputAngle(currentInputAngle), false);
             updateCurrentAngles();
+            // Ensure plotCanvas and plotCtx are initialized
+            plotCanvas = document.getElementById('plot-canvas');
+            plotCtx = plotCanvas ? plotCanvas.getContext('2d') : null;
             drawPlot();
         }
     };
