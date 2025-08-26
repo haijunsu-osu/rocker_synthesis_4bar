@@ -15,6 +15,10 @@ let groundLength = 200;
 let currentInputAngle = 30;
 let animationStep = 0;
 let slider = null;
+const linkLengthsDiv = document.getElementById('linkLengths');
+const plotCanvas = document.getElementById('plot-canvas');
+const plotCtx = plotCanvas ? plotCanvas.getContext('2d') : null;
+const currentAnglesDiv = document.getElementById('currentAngles');
 
 function parseAngles(str) {
     return str.split(',').map(s => parseFloat(s.trim())).filter(a => !isNaN(a));
@@ -169,6 +173,8 @@ function synthesize() {
         alert('No solution found. Try different angles or ground length.');
         return;
     }
+    // Show link lengths
+    linkLengthsDiv.innerHTML = `<b>Link Lengths:</b> Ground: ${groundLength.toFixed(2)}, Input: ${solution.inputLen.toFixed(2)}, Output: ${solution.outputLen.toFixed(2)}, Coupler: ${solution.couplerLen.toFixed(2)}`;
     // Draw both original task positions and solution linkage overlay
     drawSpecifiedPositions();
     drawLinkage(groundLength, solution.inputLen, solution.outputLen, solution.couplerLen, currentInputAngle, interpolateOutputAngle(currentInputAngle), false);
@@ -179,6 +185,8 @@ function synthesize() {
         slider.max = Math.max(...inputAngles);
         slider.value = currentInputAngle;
     }
+    drawPlot();
+    updateCurrentAngles();
 }
 
 function animateLinkage() {
@@ -193,6 +201,8 @@ function animateLinkage() {
     drawSpecifiedPositions();
     drawLinkage(groundLength, solution.inputLen, solution.outputLen, solution.couplerLen, currentInputAngle, interpolateOutputAngle(currentInputAngle), false);
     animationId = requestAnimationFrame(animateLinkage);
+    updateCurrentAngles();
+    drawPlot();
 }
 function interpolateOutputAngle(inputAngle) {
     // Linear interpolation for output angle
@@ -238,8 +248,84 @@ function addSlider() {
         if (solution) {
             drawSpecifiedPositions();
             drawLinkage(groundLength, solution.inputLen, solution.outputLen, solution.couplerLen, currentInputAngle, interpolateOutputAngle(currentInputAngle), false);
+            updateCurrentAngles();
+            drawPlot();
         }
     };
+function updateCurrentAngles() {
+    if (!solution) {
+        currentAnglesDiv.innerHTML = '';
+        return;
+    }
+    const outAngle = interpolateOutputAngle(currentInputAngle);
+    currentAnglesDiv.innerHTML = `<b>Current Position:</b> Input Angle: ${currentInputAngle.toFixed(1)}°, Output Angle: ${outAngle.toFixed(1)}°`;
+}
+
+function drawPlot() {
+    if (!plotCtx || !solution) return;
+    // Clear plot
+    plotCtx.clearRect(0, 0, plotCanvas.width, plotCanvas.height);
+    // Axes
+    plotCtx.save();
+    plotCtx.strokeStyle = '#333';
+    plotCtx.lineWidth = 2;
+    plotCtx.beginPath();
+    plotCtx.moveTo(40, 20);
+    plotCtx.lineTo(40, plotCanvas.height-40);
+    plotCtx.lineTo(plotCanvas.width-20, plotCanvas.height-40);
+    plotCtx.stroke();
+    // Labels
+    plotCtx.font = '14px Arial';
+    plotCtx.fillStyle = '#333';
+    plotCtx.fillText('Output Angle (deg)', 50, 30);
+    plotCtx.save();
+    plotCtx.translate(10, plotCanvas.height/2);
+    plotCtx.rotate(-Math.PI/2);
+    plotCtx.fillText('Input Angle (deg)', 0, 0);
+    plotCtx.restore();
+    // Range
+    const minIn = Math.min(...inputAngles);
+    const maxIn = Math.max(...inputAngles);
+    const minOut = Math.min(...outputAngles);
+    const maxOut = Math.max(...outputAngles);
+    // Plot curve
+    plotCtx.strokeStyle = '#1976d2';
+    plotCtx.lineWidth = 2;
+    plotCtx.beginPath();
+    for (let a = minIn; a <= maxIn; a += 1) {
+        const outA = interpolateOutputAngle(a);
+        const x = 40 + ((a-minIn)/(maxIn-minIn))*(plotCanvas.width-60);
+        const y = plotCanvas.height-40 - ((outA-minOut)/(maxOut-minOut))*(plotCanvas.height-60);
+        if (a === minIn) plotCtx.moveTo(x, y);
+        else plotCtx.lineTo(x, y);
+    }
+    plotCtx.stroke();
+    // Mark specified task positions
+    for (let i = 0; i < inputAngles.length; i++) {
+        const a = inputAngles[i];
+        const outA = outputAngles[i];
+        const x = 40 + ((a-minIn)/(maxIn-minIn))*(plotCanvas.width-60);
+        const y = plotCanvas.height-40 - ((outA-minOut)/(maxOut-minOut))*(plotCanvas.height-60);
+        plotCtx.beginPath();
+        plotCtx.arc(x, y, 6, 0, 2*Math.PI);
+        plotCtx.fillStyle = '#d32f2f';
+        plotCtx.fill();
+        plotCtx.strokeStyle = '#333';
+        plotCtx.stroke();
+    }
+    // Mark current position
+    const currA = currentInputAngle;
+    const currOutA = interpolateOutputAngle(currA);
+    const currX = 40 + ((currA-minIn)/(maxIn-minIn))*(plotCanvas.width-60);
+    const currY = plotCanvas.height-40 - ((currOutA-minOut)/(maxOut-minOut))*(plotCanvas.height-60);
+    plotCtx.beginPath();
+    plotCtx.arc(currX, currY, 8, 0, 2*Math.PI);
+    plotCtx.fillStyle = '#388e3c';
+    plotCtx.fill();
+    plotCtx.strokeStyle = '#333';
+    plotCtx.stroke();
+    plotCtx.restore();
+}
     controlsDiv.appendChild(slider);
 }
 

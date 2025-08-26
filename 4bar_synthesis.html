@@ -16,26 +16,34 @@
 </head>
 <body>
     <div class="container">
-        <h2>Interactive Synthesis of Planar 4-Bar Linkage</h2>
+        <h2>Triple Rocker Synthesis of Planar 4-Bar Linkage</h2>
         <div class="inputs">
             <label>Ground Link Length
                 <input type="number" id="groundLength" value="200" min="10" max="1000">
             </label>
-            <label>Input Angles (deg, comma separated)
+            <label>Input Angles (deg)
                 <input type="text" id="inputAngles" value="30, 60, 90">
             </label>
-            <label>Output Angles (deg, comma separated)
+            <label>Output Angles (deg)
                 <input type="text" id="outputAngles" value="45, 75, 105">
             </label>
             <button id="synthesizeBtn">Synthesize</button>
+    </div>
+    <div id="linkLengths" style="margin-bottom: 16px; font-size: 16px; color: #1976d2;"></div>
         </div>
         <div id="canvas-container">
-            <canvas id="linkage-canvas" width="700" height="500"></canvas>
+            <div style="display: flex; flex-direction: row;">
+                <canvas id="linkage-canvas" width="700" height="500"></canvas>
+                <div style="width: 300px; margin-left: 20px;">
+                    <canvas id="plot-canvas" width="280" height="500" style="border:1px solid #ccc; background:#fff;"></canvas>
+                </div>
+            </div>
         </div>
         <div class="controls">
             <button id="playPauseBtn">Play</button>
             <!-- Slider will be added by JS -->
         </div>
+        <div id="currentAngles" style="margin-top: 10px; font-size: 16px; color: #388e3c;"></div>
     </div>
     <script src="4bar_synthesis.js"></script>
 </body>
