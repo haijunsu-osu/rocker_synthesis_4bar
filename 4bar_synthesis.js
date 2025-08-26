@@ -112,44 +112,63 @@ function drawSpecifiedPositions() {
 }
 
 function leastSquaresSolver(groundLen, inputAngles, outputAngles) {
-    // Solve for inputLen, outputLen, couplerLen (min square error)
-    // For each position, the coupler length = sqrt((Cx - Dx)^2 + (Cy - Dy)^2)
-    // We want couplerLen to be the same for all positions
-    // Set up Ax = b for least squares
-    const n = inputAngles.length;
-    const A = [];
-    const b = [];
-    for (let i = 0; i < n; i++) {
-        const theta1 = inputAngles[i] * Math.PI / 180;
-        const theta2 = outputAngles[i] * Math.PI / 180;
-        // C = A + inputLen*[cos(theta1), sin(theta1)]
-        // D = B + outputLen*[cos(theta2), sin(theta2)]
-        // A = [-groundLen/2, 0], B = [groundLen/2, 0]
-        // couplerLen^2 = (Cx - Dx)^2 + (Cy - Dy)^2
-        // Expand: (inputLen*cos(theta1) + groundLen/2 - outputLen*cos(theta2) - groundLen/2)^2 + (inputLen*sin(theta1) - outputLen*sin(theta2))^2 = couplerLen^2
-        // Let x = [inputLen, outputLen, couplerLen]
-        // For each i: f_i(x) = sqrt((Cx - Dx)^2 + (Cy - Dy)^2) - couplerLen = 0
-        // Linearize: (Cx - Dx)^2 + (Cy - Dy)^2 = couplerLen^2
-        // So: (inputLen*cos(theta1) - outputLen*cos(theta2))^2 + (inputLen*sin(theta1) - outputLen*sin(theta2))^2 = couplerLen^2
-        // Expand and collect terms:
-        // inputLen^2 + outputLen^2 - 2*inputLen*outputLen*cos(theta1 - theta2) = couplerLen^2
-        // So: inputLen^2 + outputLen^2 - 2*inputLen*outputLen*cos(theta1 - theta2) - couplerLen^2 = 0
-        // This is nonlinear, but we can solve by least squares for inputLen, outputLen, couplerLen
-        // We'll use a simple grid search for demonstration
+    // Synthesis for three task positions: solve for inputLen, outputLen, couplerLen
+    // At each position, the coupler length (distance between moving pins) must be the same
+    // This leads to two quadratic equations in three unknowns
+    if (inputAngles.length !== 3 || outputAngles.length !== 3) {
+        // Fallback to grid search for other cases
+        // ...existing code...
+        let best = null;
+        let minErr = Infinity;
+        for (let inputLen = 40; inputLen <= 200; inputLen += 5) {
+            for (let outputLen = 40; outputLen <= 200; outputLen += 5) {
+                for (let couplerLen = 40; couplerLen <= 200; couplerLen += 5) {
+                    let err = 0;
+                    for (let i = 0; i < inputAngles.length; i++) {
+                        const theta1 = inputAngles[i] * Math.PI / 180;
+                        const theta2 = outputAngles[i] * Math.PI / 180;
+                        const val = inputLen**2 + outputLen**2 - 2*inputLen*outputLen*Math.cos(theta1 - theta2) - couplerLen**2;
+                        err += val*val;
+                    }
+                    if (err < minErr) {
+                        minErr = err;
+                        best = {inputLen, outputLen, couplerLen};
+                    }
+                }
+            }
+        }
+        return best;
     }
-    // Simple grid search (for demo, not efficient)
+    // For three positions, set up equations:
+    // For i=0,1,2: C_i = A + inputLen*[cos(theta1_i), sin(theta1_i)]
+    //              D_i = B + outputLen*[cos(theta2_i), sin(theta2_i)]
+    //              |C_i - D_i| = couplerLen
+    // For i=0,1,2: (Cx_i - Dx_i)^2 + (Cy_i - Dy_i)^2 = couplerLen^2
+    // So for i=0,1 and i=1,2: (|C_0-D_0|^2 - |C_1-D_1|^2) = 0, (|C_1-D_1|^2 - |C_2-D_2|^2) = 0
+    // We'll solve these two equations for inputLen, outputLen, couplerLen numerically
+    const theta1 = inputAngles.map(a => a * Math.PI / 180);
+    const theta2 = outputAngles.map(a => a * Math.PI / 180);
+    const A = [-groundLen/2, 0];
+    const B = [groundLen/2, 0];
+    function couplerDist2(inputLen, outputLen, i) {
+        const Cx = A[0] + inputLen * Math.cos(theta1[i]);
+        const Cy = A[1] + inputLen * Math.sin(theta1[i]);
+        const Dx = B[0] + outputLen * Math.cos(theta2[i]);
+        const Dy = B[1] + outputLen * Math.sin(theta2[i]);
+        return (Cx - Dx)**2 + (Cy - Dy)**2;
+    }
+    // Use a grid search for robust solution
     let best = null;
     let minErr = Infinity;
-    for (let inputLen = 40; inputLen <= 200; inputLen += 5) {
-        for (let outputLen = 40; outputLen <= 200; outputLen += 5) {
-            for (let couplerLen = 40; couplerLen <= 200; couplerLen += 5) {
-                let err = 0;
-                for (let i = 0; i < n; i++) {
-                    const theta1 = inputAngles[i] * Math.PI / 180;
-                    const theta2 = outputAngles[i] * Math.PI / 180;
-                    const val = inputLen**2 + outputLen**2 - 2*inputLen*outputLen*Math.cos(theta1 - theta2) - couplerLen**2;
-                    err += val*val;
-                }
+    for (let inputLen = 40; inputLen <= 200; inputLen += 1) {
+        for (let outputLen = 40; outputLen <= 200; outputLen += 1) {
+            for (let couplerLen = 40; couplerLen <= 200; couplerLen += 1) {
+                // At positions 0,1,2
+                const d0 = couplerDist2(inputLen, outputLen, 0);
+                const d1 = couplerDist2(inputLen, outputLen, 1);
+                const d2 = couplerDist2(inputLen, outputLen, 2);
+                // The squared coupler length should be the same
+                const err = Math.abs(d0 - d1) + Math.abs(d1 - d2) + Math.abs(d0 - couplerLen**2) + Math.abs(d1 - couplerLen**2) + Math.abs(d2 - couplerLen**2);
                 if (err < minErr) {
                     minErr = err;
                     best = {inputLen, outputLen, couplerLen};
