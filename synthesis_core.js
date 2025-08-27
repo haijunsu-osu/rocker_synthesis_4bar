@@ -1,11 +1,13 @@
 // Three-position double rocker synthesis using numerical optimization
-function doubleRockerSynthesis(groundLen, inputAngles, outputAngles, tol=1e-10, maxIter=1000) {
+function doubleRockerSynthesis(groundLen, inputAngles, outputAngles, tol=1e-10, maxIter=5000) {
+    // Normalize ground link to 1 for optimization
+    const r1_norm = 1.0;
     // Cost function: difference in coupler lengths at three positions
     function cost(x) {
         const r2 = x[0];
         const r4 = x[1];
-        const A = [-groundLen/2, 0];
-        const B = [groundLen/2, 0];
+        const A = [-r1_norm/2, 0];
+        const B = [r1_norm/2, 0];
         const theta = inputAngles.map(a => a * Math.PI / 180);
         const phi = outputAngles.map(a => a * Math.PI / 180);
         function Ai(i) {
@@ -20,8 +22,8 @@ function doubleRockerSynthesis(groundLen, inputAngles, outputAngles, tol=1e-10, 
         return (d1 - d2)**2 + (d2 - d3)**2;
     }
     // Simple Nelder-Mead optimizer
-    let x = [100, 100];
-    let step = 1.0;
+    let x = [1, 1];
+    let step = 0.05;
     for (let iter = 0; iter < maxIter; iter++) {
         let best = cost(x);
         let improved = false;
@@ -29,6 +31,7 @@ function doubleRockerSynthesis(groundLen, inputAngles, outputAngles, tol=1e-10, 
             for (let dir of [-1, 1]) {
                 let xnew = x.slice();
                 xnew[i] += dir * step;
+                if (xnew[i] <= 0) continue;
                 let c = cost(xnew);
                 if (c < best) {
                     x = xnew;
@@ -40,38 +43,56 @@ function doubleRockerSynthesis(groundLen, inputAngles, outputAngles, tol=1e-10, 
         if (!improved) step *= 0.5;
         if (step < tol) break;
     }
-    // Compute final coupler length
-    const r2 = x[0];
-    const r4 = x[1];
-    const A = [-groundLen/2, 0];
-    const B = [groundLen/2, 0];
+    // Compute final coupler length (normalized)
+    const r2_norm = x[0];
+    const r4_norm = x[1];
+    const A = [-r1_norm/2, 0];
+    const B = [r1_norm/2, 0];
     const theta = inputAngles.map(a => a * Math.PI / 180);
     const phi = outputAngles.map(a => a * Math.PI / 180);
     function Ai(i) {
-        return [A[0] + r2 * Math.cos(theta[i]), A[1] + r2 * Math.sin(theta[i])];
+        return [A[0] + r2_norm * Math.cos(theta[i]), A[1] + r2_norm * Math.sin(theta[i])];
     }
     function Bi(i) {
-        return [B[0] + r4 * Math.cos(phi[i]), B[1] + r4 * Math.sin(phi[i])];
+        return [B[0] + r4_norm * Math.cos(phi[i]), B[1] + r4_norm * Math.sin(phi[i])];
     }
     const d1 = Math.hypot(Ai(0)[0] - Bi(0)[0], Ai(0)[1] - Bi(0)[1]);
     const d2 = Math.hypot(Ai(1)[0] - Bi(1)[0], Ai(1)[1] - Bi(1)[1]);
     const d3 = Math.hypot(Ai(2)[0] - Bi(2)[0], Ai(2)[1] - Bi(2)[1]);
-    const r3 = (d1 + d2 + d3) / 3;
-    return {inputLen: r2, outputLen: r4, couplerLen: r3, d1, d2, d3};
+    const r3_norm = (d1 + d2 + d3) / 3;
+    // Scale all lengths to desired ground link
+    const scale = groundLen / r1_norm;
+    return {
+        inputLen: r2_norm * scale,
+        outputLen: r4_norm * scale,
+        couplerLen: r3_norm * scale,
+        d1: d1 * scale,
+        d2: d2 * scale,
+        d3: d3 * scale
+    };
 }
 
 // synthesis_core.js
 // Core synthesis and kinematic functions for 4-bar linkage (no browser dependencies)
 
 // Newton-Raphson solver for 4-bar synthesis
-function newtonSolver(groundLen, inputAngles, outputAngles, tol=1e-10, maxIter=100) {
-    // Initial guess
-    let inputLen = 120;
-    let outputLen = 120;
+function newtonSolver(groundLen, inputAngles, outputAngles, tol=1e-10, maxIter=1000) {
+    // Initial guess: use lengths from initial drawing (first design position)
     const theta1 = inputAngles.map(a => a * Math.PI / 180);
     const theta2 = outputAngles.map(a => a * Math.PI / 180);
     const A = [-groundLen/2, 0];
     const B = [groundLen/2, 0];
+    // Calculate initial input and output link lengths from first position
+    const inputLen_init = Math.hypot(
+        Math.cos(theta1[0]),
+        Math.sin(theta1[0])
+    );
+    const outputLen_init = Math.hypot(
+        Math.cos(theta2[0]),
+        Math.sin(theta2[0])
+    );
+    let inputLen = inputLen_init * groundLen;
+    let outputLen = outputLen_init * groundLen;
     function couplerLenAt(i, inputLen, outputLen) {
         const Cx = A[0] + inputLen * Math.cos(theta1[i]);
         const Cy = A[1] + inputLen * Math.sin(theta1[i]);
