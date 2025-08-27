@@ -3,6 +3,7 @@
 // Interactive synthesis of planar 4-bar linkages
 // Use optimization-based solver from synthesis_core.js
 const { doubleRockerSynthesis } = require('./synthesis_core');
+const { leastSquaresSolver } = require('./synthesis_core');
 
 const canvas = document.getElementById('linkage-canvas');
 const ctx = canvas.getContext('2d');
@@ -122,13 +123,8 @@ function drawSpecifiedPositions() {
 }
 
 // Use doubleRockerSynthesis for three positions, otherwise fallback to leastSquaresSolver from synthesis_core
-function leastSquaresSolver(groundLen, inputAngles, outputAngles) {
-    if (inputAngles.length === 3 && outputAngles.length === 3) {
-        return doubleRockerSynthesis(groundLen, inputAngles, outputAngles);
-    }
-    // Otherwise, fallback to leastSquaresSolver from synthesis_core
-    return require('./synthesis_core').leastSquaresSolver(groundLen, inputAngles, outputAngles);
-}
+// Removed duplicate leastSquaresSolver declaration to fix redeclaration error
+// The leastSquaresSolver function is now imported from synthesis_core.js
 
 function synthesize() {
     // Validate the solution by kinematic analysis
