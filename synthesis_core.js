@@ -82,17 +82,17 @@ function newtonSolver(groundLen, inputAngles, outputAngles, tol=1e-10, maxIter=1
     const theta2 = outputAngles.map(a => a * Math.PI / 180);
     const A = [-groundLen/2, 0];
     const B = [groundLen/2, 0];
-    // Calculate initial input and output link lengths from first position
-    const inputLen_init = Math.hypot(
-        Math.cos(theta1[0]),
-        Math.sin(theta1[0])
-    );
-    const outputLen_init = Math.hypot(
-        Math.cos(theta2[0]),
-        Math.sin(theta2[0])
-    );
-    let inputLen = inputLen_init * groundLen;
-    let outputLen = outputLen_init * groundLen;
+    // Calculate initial input and output link lengths from first position using actual geometry
+    // Input link: from A to C (first position)
+    const Cx = A[0] + groundLen/2 * Math.cos(theta1[0]);
+    const Cy = A[1] + groundLen/2 * Math.sin(theta1[0]);
+    const inputLen_init = Math.hypot(Cx - A[0], Cy - A[1]);
+    // Output link: from B to D (first position)
+    const Dx = B[0] + groundLen/2 * Math.cos(theta2[0]);
+    const Dy = B[1] + groundLen/2 * Math.sin(theta2[0]);
+    const outputLen_init = Math.hypot(Dx - B[0], Dy - B[1]);
+    let inputLen = inputLen_init;
+    let outputLen = outputLen_init;
     function couplerLenAt(i, inputLen, outputLen) {
         const Cx = A[0] + inputLen * Math.cos(theta1[i]);
         const Cy = A[1] + inputLen * Math.sin(theta1[i]);
