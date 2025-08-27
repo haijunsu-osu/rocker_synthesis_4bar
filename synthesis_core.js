@@ -199,4 +199,4 @@ function interpolateOutputAngle(inputAngle, solution, groundLength) {
     return theta4 * 180 / Math.PI;
 }
 
-module.exports = { leastSquaresSolver, interpolateOutputAngle, doubleRockerSynthesis };
+export { leastSquaresSolver, interpolateOutputAngle, doubleRockerSynthesis };

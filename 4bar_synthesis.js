@@ -2,8 +2,7 @@
 // 4bar_synthesis.js
 // Interactive synthesis of planar 4-bar linkages
 // Use optimization-based solver from synthesis_core.js
-const { doubleRockerSynthesis } = require('./synthesis_core');
-const { leastSquaresSolver } = require('./synthesis_core');
+import { doubleRockerSynthesis, leastSquaresSolver } from './synthesis_core.js';
 
 const canvas = document.getElementById('linkage-canvas');
 const ctx = canvas.getContext('2d');
