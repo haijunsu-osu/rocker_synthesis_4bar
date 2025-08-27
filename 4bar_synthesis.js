@@ -108,9 +108,16 @@ function drawLinkage(groundLen, inputLen, outputLen, couplerLen, inputAngle, out
 
 function drawSpecifiedPositions() {
     drawGrid();
-    // Draw input/output links for each specified position
-    for (let i = 0; i < inputAngles.length; i++) {
-        drawLinkage(groundLength, 60, 60, 80, inputAngles[i], outputAngles[i], true);
+    // Draw input/output links for each specified position using computed solution if available
+    if (solution) {
+        for (let i = 0; i < inputAngles.length; i++) {
+            drawLinkage(groundLength, solution.inputLen, solution.outputLen, solution.couplerLen, inputAngles[i], outputAngles[i], true);
+        }
+    } else {
+        // Fallback to default visualization if no solution yet
+        for (let i = 0; i < inputAngles.length; i++) {
+            drawLinkage(groundLength, 60, 60, 80, inputAngles[i], outputAngles[i], true);
+        }
     }
 }
 
