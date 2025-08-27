@@ -1,5 +1,8 @@
+
 // 4bar_synthesis.js
 // Interactive synthesis of planar 4-bar linkages
+// Use optimization-based solver from synthesis_core.js
+const { leastSquaresSolver, doubleRockerSynthesis } = require('./synthesis_core');
 
 const canvas = document.getElementById('linkage-canvas');
 const ctx = canvas.getContext('2d');
@@ -112,74 +115,52 @@ function drawSpecifiedPositions() {
 }
 
 function leastSquaresSolver(groundLen, inputAngles, outputAngles) {
-    // Synthesis for three task positions: solve for inputLen, outputLen, couplerLen
-    // At each position, the coupler length (distance between moving pins) must be the same
-    // This leads to two quadratic equations in three unknowns
-    if (inputAngles.length !== 3 || outputAngles.length !== 3) {
-        // Fallback to grid search for other cases
-        // ...existing code...
-        let best = null;
-        let minErr = Infinity;
-        for (let inputLen = 40; inputLen <= 200; inputLen += 5) {
-            for (let outputLen = 40; outputLen <= 200; outputLen += 5) {
-                for (let couplerLen = 40; couplerLen <= 200; couplerLen += 5) {
-                    let err = 0;
-                    for (let i = 0; i < inputAngles.length; i++) {
-                        const theta1 = inputAngles[i] * Math.PI / 180;
-                        const theta2 = outputAngles[i] * Math.PI / 180;
-                        const val = inputLen**2 + outputLen**2 - 2*inputLen*outputLen*Math.cos(theta1 - theta2) - couplerLen**2;
-                        err += val*val;
-                    }
-                    if (err < minErr) {
-                        minErr = err;
-                        best = {inputLen, outputLen, couplerLen};
-                    }
-                }
-            }
-        }
-        return best;
+    // For three positions, use doubleRockerSynthesis for consistency with CLI
+    if (inputAngles.length === 3 && outputAngles.length === 3) {
+        return doubleRockerSynthesis(groundLen, inputAngles, outputAngles);
     }
-    // For three positions, set up equations:
-    // For i=0,1,2: C_i = A + inputLen*[cos(theta1_i), sin(theta1_i)]
-    //              D_i = B + outputLen*[cos(theta2_i), sin(theta2_i)]
-    //              |C_i - D_i| = couplerLen
-    // For i=0,1,2: (Cx_i - Dx_i)^2 + (Cy_i - Dy_i)^2 = couplerLen^2
-    // So for i=0,1 and i=1,2: (|C_0-D_0|^2 - |C_1-D_1|^2) = 0, (|C_1-D_1|^2 - |C_2-D_2|^2) = 0
-    // We'll solve these two equations for inputLen, outputLen, couplerLen numerically
-    const theta1 = inputAngles.map(a => a * Math.PI / 180);
-    const theta2 = outputAngles.map(a => a * Math.PI / 180);
-    const A = [-groundLen/2, 0];
-    const B = [groundLen/2, 0];
-    function couplerDist2(inputLen, outputLen, i) {
-        const Cx = A[0] + inputLen * Math.cos(theta1[i]);
-        const Cy = A[1] + inputLen * Math.sin(theta1[i]);
-        const Dx = B[0] + outputLen * Math.cos(theta2[i]);
-        const Dy = B[1] + outputLen * Math.sin(theta2[i]);
-        return (Cx - Dx)**2 + (Cy - Dy)**2;
-    }
-    // Use a grid search for robust solution
-    let best = null;
-    let minErr = Infinity;
-    for (let inputLen = 40; inputLen <= 200; inputLen += 1) {
-        for (let outputLen = 40; outputLen <= 200; outputLen += 1) {
-            for (let couplerLen = 40; couplerLen <= 200; couplerLen += 1) {
-                // At positions 0,1,2
-                const d0 = couplerDist2(inputLen, outputLen, 0);
-                const d1 = couplerDist2(inputLen, outputLen, 1);
-                const d2 = couplerDist2(inputLen, outputLen, 2);
-                // The squared coupler length should be the same
-                const err = Math.abs(d0 - d1) + Math.abs(d1 - d2) + Math.abs(d0 - couplerLen**2) + Math.abs(d1 - couplerLen**2) + Math.abs(d2 - couplerLen**2);
-                if (err < minErr) {
-                    minErr = err;
-                    best = {inputLen, outputLen, couplerLen};
-                }
-            }
-        }
-    }
-    return best;
+    // Otherwise, fallback to leastSquaresSolver
+    return require('./synthesis_core').leastSquaresSolver(groundLen, inputAngles, outputAngles);
 }
 
 function synthesize() {
+    // Validate the solution by kinematic analysis
+    function validateSolution() {
+        if (!solution) return;
+        const r1 = groundLength;
+        const r2 = solution.inputLen;
+        const r3 = solution.couplerLen;
+        const r4 = solution.outputLen;
+        const Ax = -r1/2, Ay = 0;
+        const Bx = r1/2, By = 0;
+        let allMatch = true;
+        for (let i = 0; i < inputAngles.length; i++) {
+            const theta2 = inputAngles[i];
+            const theta4 = interpolateOutputAngle(theta2);
+            // Compute C and D
+            const theta2_rad = theta2 * Math.PI / 180;
+            const theta4_rad = theta4 * Math.PI / 180;
+            const Cx = Ax + r2 * Math.cos(theta2_rad);
+            const Cy = Ay + r2 * Math.sin(theta2_rad);
+            const Dx = Bx + r4 * Math.cos(theta4_rad);
+            const Dy = By + r4 * Math.sin(theta4_rad);
+            // Coupler length
+            const dist = Math.sqrt((Cx - Dx)**2 + (Cy - Dy)**2);
+            // Should match r3
+            const outAngle = theta4;
+            const expectedOutAngle = outputAngles[i];
+            const angleError = Math.abs(outAngle - expectedOutAngle);
+            const lengthError = Math.abs(dist - r3);
+            console.log(`Task ${i+1}: Input=${theta2.toFixed(2)} Output=${outAngle.toFixed(2)} (expected ${expectedOutAngle.toFixed(2)}) Coupler=${dist.toFixed(2)} (expected ${r3.toFixed(2)}) AngleErr=${angleError.toFixed(2)} LenErr=${lengthError.toFixed(2)}`);
+            if (angleError > 1.0 || lengthError > 1.0) allMatch = false;
+        }
+        if (allMatch) {
+            console.log('Validation PASSED: Linkage reaches all specified task positions.');
+        } else {
+            console.log('Validation FAILED: Linkage does not reach all specified task positions.');
+        }
+    }
+    validateSolution();
     groundLength = parseFloat(document.getElementById('groundLength').value);
     inputAngles = parseAngles(document.getElementById('inputAngles').value);
     outputAngles = parseAngles(document.getElementById('outputAngles').value);
