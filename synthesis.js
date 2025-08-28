@@ -231,13 +231,15 @@ if (typeof window !== 'undefined') {
     const playPauseBtn = document.getElementById('playPauseBtn');
     const modeOpenRadio = document.getElementById('modeOpen');
     const modeClosedRadio = document.getElementById('modeClosed');
+    const resultsDiv = document.getElementById('results');
 
     // State variables
     let r1, r2, r3, r4;
     let thetaVals = [];
     let phiVals = [];
     let prevPhi;
-    let assemblyMode = 'open';
+    // Default assembly mode is set to 'closed'
+    let assemblyMode = 'closed';
     let playing = false;
     let animationId = null;
     // View state for panning/zooming
@@ -311,7 +313,7 @@ if (typeof window !== 'undefined') {
      * canvas.  The positions object must contain O2, A, B, O4.  The
      * linkage is drawn in the specified colour.
      */
-    function drawLinkage(pos, colour = 'blue') {
+function drawLinkage(pos, colour = 'blue', drawLabels = false) {
       const { O2, A, B, O4 } = pos;
       const pO2 = worldToCanvas(O2);
       const pA = worldToCanvas(A);
@@ -320,19 +322,57 @@ if (typeof window !== 'undefined') {
       ctx.strokeStyle = colour;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      // r2
+      // Draw r2 (input link)
       ctx.moveTo(pO2.x, pO2.y);
       ctx.lineTo(pA.x, pA.y);
-      // r3
+      // Draw r3 (coupler)
       ctx.lineTo(pB.x, pB.y);
-      // r4
+      // Draw r4 (output)
       ctx.lineTo(pO4.x, pO4.y);
       ctx.stroke();
-      // ground link
+      // Draw ground link r1 separately (O2 to O4)
       ctx.beginPath();
       ctx.moveTo(pO2.x, pO2.y);
       ctx.lineTo(pO4.x, pO4.y);
       ctx.stroke();
+      // Optionally draw labels for each link near its midpoint
+      if (drawLabels) {
+        ctx.save();
+        ctx.fillStyle = colour;
+        // Increase font size for link length labels for better visibility
+        ctx.font = '16px Arial';
+        // Helper to draw label near a segment defined by world coordinates
+        function labelSegment(pt1, pt2, label) {
+          const p1 = worldToCanvas(pt1);
+          const p2 = worldToCanvas(pt2);
+          const midX = (p1.x + p2.x) / 2;
+          const midY = (p1.y + p2.y) / 2;
+          const vx = p2.x - p1.x;
+          const vy = p2.y - p1.y;
+          const length = Math.hypot(vx, vy);
+          if (length === 0) {
+            ctx.fillText(label, midX, midY);
+            return;
+          }
+          // Perpendicular unit vector (rotate by 90 degrees)
+          let offX = -vy / length;
+          let offY = vx / length;
+          // Scale offset for label placement (fixed pixel distance)
+          const offsetPixels = 15;
+          const lx = midX + offX * offsetPixels;
+          const ly = midY + offY * offsetPixels;
+          ctx.fillText(label, lx - ctx.measureText(label).width / 2, ly);
+        }
+        // r2: between O2 and A
+        labelSegment(pos.O2, pos.A, 'r₂');
+        // r3: between A and B
+        labelSegment(pos.A, pos.B, 'r₃');
+        // r4: between B and O4
+        labelSegment(pos.B, pos.O4, 'r₄');
+        // r1: ground link between O2 and O4
+        labelSegment(pos.O2, pos.O4, 'r₁');
+        ctx.restore();
+      }
     }
 
     /**
@@ -350,12 +390,15 @@ if (typeof window !== 'undefined') {
         const A = { x: r2 * Math.cos(theta), y: r2 * Math.sin(theta) };
         const B = { x: O4p.x + r4 * Math.cos(phi), y: O4p.y + r4 * Math.sin(phi) };
         drawLinkage({ O2: O2, A: A, B: B, O4: O4p }, colours[i]);
-        // Draw label near coupler joint
-        const label = `θ${i + 1}=${Math.round(rad2deg(theta) * 10) / 10}°, φ${i + 1}=${Math.round(rad2deg(phi) * 10) / 10}°`;
+        // Draw symbolic labels near the input and output links
+        const pA = worldToCanvas(A);
         const pB = worldToCanvas(B);
         ctx.fillStyle = colours[i];
         ctx.font = '12px Arial';
-        ctx.fillText(label, pB.x + 5, pB.y - 5);
+        // Place θᵢ near the input joint (slightly up and left)
+        ctx.fillText(`θ${i + 1}`, pA.x - 20, pA.y - 5);
+        // Place φᵢ near the output joint (slightly up and right)
+        ctx.fillText(`φ${i + 1}`, pB.x + 5, pB.y - 5);
       }
     }
 
@@ -387,7 +430,8 @@ if (typeof window !== 'undefined') {
       const pos = computeFourBarPositions(r1, r2, r3, r4, theta, prevPhi, assemblyMode);
       prevPhi = pos.phi;
       drawGrid();
-      drawLinkage(pos, 'blue');
+      // Draw the mechanism with link labels
+      drawLinkage(pos, 'blue', true);
       drawSpecifiedPositions();
       // Draw φ–θ plot on the right, indicating the current (θ, φ)
       if (plotCtx) drawPhiThetaPlot(theta, pos.phi);
@@ -516,6 +560,11 @@ if (typeof window !== 'undefined') {
         r2 = result.r2;
         r3 = result.r3;
         r4 = result.r4;
+        // Sanity check: all link lengths must be positive
+        if (r2 <= 0 || r3 <= 0 || r4 <= 0) {
+          alert('Invalid synthesis: all link lengths must be positive.\nThe solution has been rejected.');
+          return;
+        }
         playPauseBtn.disabled = false;
         slider.disabled = false;
         slider.value = '0';
@@ -529,6 +578,15 @@ if (typeof window !== 'undefined') {
         animate();
         // Print solution to console
         console.log('Synthesis result:', { r1: r1, r2: r2, r3: r3, r4: r4 });
+        // Update results display if element exists
+        if (resultsDiv) {
+          resultsDiv.innerHTML =
+            `<strong>Link lengths:</strong><br>` +
+            `r₁ = ${r1.toFixed(3)}<br>` +
+            `r₂ = ${r2.toFixed(3)}<br>` +
+            `r₃ = ${r3.toFixed(3)}<br>` +
+            `r₄ = ${r4.toFixed(3)}`;
+        }
       } catch (err) {
         alert('Error in synthesis: ' + err.message);
         console.error(err);
@@ -597,7 +655,7 @@ if (typeof window !== 'undefined') {
           const pos = computeFourBarPositions(r1, r2, r3, r4, theta, prevPhi, assemblyMode);
           prevPhi = pos.phi;
           drawGrid();
-          drawLinkage(pos, 'blue');
+        drawLinkage(pos, 'blue', true);
           drawSpecifiedPositions();
           if (plotCtx) drawPhiThetaPlot();
         } else {
@@ -622,7 +680,7 @@ if (typeof window !== 'undefined') {
           const pos = computeFourBarPositions(r1, r2, r3, r4, theta, prevPhi, assemblyMode);
           prevPhi = pos.phi;
           drawGrid();
-          drawLinkage(pos, 'blue');
+          drawLinkage(pos, 'blue', true);
           drawSpecifiedPositions();
           if (plotCtx) drawPhiThetaPlot();
         } else {

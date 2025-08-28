@@ -15,10 +15,13 @@
 </head>
 <body>
   <h2>Three‑Position Synthesis of a Four‑Bar Mechanism</h2>
+  <div id="formContainer" style="display:flex; align-items:flex-start;">
   <div id="inputs">
     <div class="input-row">
       <label for="r1">r₁:</label>
       <input type="number" id="r1" step="0.01" value="4.5">
+      <!-- Synthesize button placed next to r1 input -->
+      <button id="synthesizeBtn" style="margin-left:8px;">Synthesize</button>
     </div>
     <div class="input-row">
       <label for="theta1">θ₁ (°):</label>
@@ -41,21 +44,23 @@
       <label for="phi3">φ₃ (°):</label>
       <input type="number" id="phi3" step="0.01" value="119.6">
     </div>
-    <button id="synthesizeBtn">Synthesize</button>
   </div>
+    <!-- Display the computed link lengths after synthesis on the right side of inputs -->
+    <div id="results" style="margin-left:20px; line-height:1.5;"></div>
+  </div> <!-- end formContainer -->
 
   <div id="canvasContainer">
     <!-- Main canvas for drawing the mechanism -->
-    <canvas id="fourbarCanvas" width="600" height="500"></canvas>
-    <!-- Plot canvas for φ–θ curve -->
-    <canvas id="plotCanvas" width="400" height="500" style="margin-left:10px;"></canvas>
+    <canvas id="fourbarCanvas" width="600" height="375"></canvas>
+    <!-- Plot canvas for φ–θ curve with the same height as the mechanism canvas -->
+    <canvas id="plotCanvas" width="400" height="375" style="margin-left:10px;"></canvas>
   </div>
   <div class="controls">
     <button id="playPauseBtn" disabled>Play</button>
     <input type="range" id="slider" min="0" max="1" step="0.001" value="0" disabled style="width: 300px;">
     <span style="margin-left:10px;">Mode:</span>
-    <label><input type="radio" name="assemblyMode" id="modeOpen" value="open" checked> Open</label>
-    <label><input type="radio" name="assemblyMode" id="modeClosed" value="closed"> Closed</label>
+    <label><input type="radio" name="assemblyMode" id="modeOpen" value="open"> Open</label>
+    <label><input type="radio" name="assemblyMode" id="modeClosed" value="closed" checked> Closed</label>
   </div>
 
   <!-- Load the synthesis library.  All logic for the UI and plotting is in synthesis.js. -->
