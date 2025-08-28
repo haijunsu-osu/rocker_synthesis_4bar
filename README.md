@@ -1,3 +1,4 @@
+
 # **Three Rocker Position Synthesis of Planar 4-bar Linkages**
 
 ---
@@ -114,11 +115,11 @@ When loaded in a browser, `synthesis.js` also attaches a complete UI implementat
 - `test_synthesis.js` – A Node test script that imports `threePositionSynthesis` and validates it against the example in the lecture notes. Run it with `node test_synthesis.js` to see the computed link lengths and verify correctness.
 
 ---
+# References
 
-### Reference
-
-See the lecture notes: [Lecture 12 Three position synthesis (PDF)](Lecture%2012%20Three%20position%20synthesis.pdf)
-
+- Lecture notes: [Lecture 12 Three position synthesis (PDF)](Lecture%2012%20Three%20position%20synthesis.pdf)
+- "Kinematics, Dynamics, and Design of Machinery" by Waldron, Kinzel, and Agrawal. [Amazon link](https://www.amazon.com/Kinematics-Dynamics-Design-Machinery-Waldron/dp/1119723093)
+---
 ## License
 
 This project is provided for educational use in mechanism design and kinematic analysis courses. See the lecture notes referenced in the code comments for additional derivation details.
