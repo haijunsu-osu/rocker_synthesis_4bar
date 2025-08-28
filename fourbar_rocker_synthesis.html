@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Three‑Position Synthesis of a Four‑Bar</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .input-row { margin-bottom: 8px; }
+    label { display: inline-block; width: 80px; }
+    input[type="number"] { width: 80px; }
+    #canvasContainer { margin-top: 20px; position: relative; }
+    #fourbarCanvas { border: 1px solid #ccc; background-color: #eee; }
+    .controls { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Three‑Position Synthesis of a Four‑Bar Mechanism</h2>
+  <div id="formContainer" style="display:flex; align-items:flex-start;">
+  <div id="inputs">
+    <div class="input-row">
+      <label for="r1">r₁:</label>
+      <input type="number" id="r1" step="0.01" value="4.5">
+      <!-- Synthesize button placed next to r1 input -->
+      <button id="synthesizeBtn" style="margin-left:8px;">Synthesize</button>
+    </div>
+    <div class="input-row">
+      <label for="theta1">θ₁ (°):</label>
+      <!-- Updated default design position: θ1 = 51°, φ1 = 100.6° -->
+      <input type="number" id="theta1" step="0.01" value="51">
+      <label for="phi1">φ₁ (°):</label>
+      <input type="number" id="phi1" step="0.01" value="100.6">
+    </div>
+    <div class="input-row">
+      <label for="theta2">θ₂ (°):</label>
+      <!-- Updated default design position: θ2 = 73°, φ2 = 105.1° -->
+      <input type="number" id="theta2" step="0.01" value="73">
+      <label for="phi2">φ₂ (°):</label>
+      <input type="number" id="phi2" step="0.01" value="105.1">
+    </div>
+    <div class="input-row">
+      <label for="theta3">θ₃ (°):</label>
+      <!-- Updated default design position: θ3 = 107°, φ3 = 119.6° -->
+      <input type="number" id="theta3" step="0.01" value="107">
+      <label for="phi3">φ₃ (°):</label>
+      <input type="number" id="phi3" step="0.01" value="119.6">
+    </div>
+  </div>
+    <!-- Display the computed link lengths after synthesis on the right side of inputs -->
+    <div id="results" style="margin-left:20px; line-height:1.5;"></div>
+  </div> <!-- end formContainer -->
+
+  <div id="canvasContainer">
+    <!-- Main canvas for drawing the mechanism -->
+    <canvas id="fourbarCanvas" width="600" height="375"></canvas>
+    <!-- Plot canvas for φ–θ curve with the same height as the mechanism canvas -->
+    <canvas id="plotCanvas" width="400" height="375" style="margin-left:10px;"></canvas>
+  </div>
+  <div class="controls">
+    <button id="playPauseBtn" disabled>Play</button>
+    <input type="range" id="slider" min="0" max="1" step="0.001" value="0" disabled style="width: 300px;">
+    <span style="margin-left:10px;">Mode:</span>
+    <label><input type="radio" name="assemblyMode" id="modeOpen" value="open"> Open</label>
+    <label><input type="radio" name="assemblyMode" id="modeClosed" value="closed" checked> Closed</label>
+  </div>
+
+  <!-- Load the synthesis library.  All logic for the UI and plotting is in synthesis.js. -->
+  <script src="synthesis.js"></script>
+</body>
+</html>
