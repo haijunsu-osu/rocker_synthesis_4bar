@@ -4,9 +4,13 @@
 
 This project implements an analytical synthesis and kinematic analysis tool for a planar four‑bar linkage. Given three precision pairs of crank and rocker angles, the tool computes the remaining link lengths (input, coupler and output links) and visualises the resulting mechanism. It also solves the closure equation at arbitrary crank angles to animate the linkage and plots the relationship between the input and output angles.
 
+## Demo
+
+![Demo animation](Rocker_Synthesis_Demo.gif)
+
 ## Using the Web Application
 
-Open `fourbar.html` in a modern browser. No server is required; the file can be opened directly from disk.
+Click [here to open the web application](https://haijunsu-osu.github.io/rocker_synthesis_4bar/fourbar_rocker_synthesis.html) in a modern browser. 
 
 Enter the ground link length r₁ and three pairs of input (θᵢ) and output (φᵢ) angles in degrees. Default values are provided in the form.
 
@@ -108,6 +112,12 @@ When loaded in a browser, `synthesis.js` also attaches a complete UI implementat
 - `fourbar.html` – A minimal HTML file that defines the user interface (input fields, buttons, canvases and radio buttons) and includes `synthesis.js`. All logic is contained in the script.
 
 - `test_synthesis.js` – A Node test script that imports `threePositionSynthesis` and validates it against the example in the lecture notes. Run it with `node test_synthesis.js` to see the computed link lengths and verify correctness.
+
+---
+
+### Reference
+
+See the lecture notes: [Lecture 12 Three position synthesis (PDF)](Lecture%2012%20Three%20position%20synthesis.pdf)
 
 ## License
 
